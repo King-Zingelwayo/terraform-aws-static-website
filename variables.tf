@@ -90,7 +90,7 @@ variable "include_email_records" {
   default     = false
 }
 
-variable "log_bucket_prevent_destroy" {
+variable "prevent_bucket_destroy" {
   description = "should this bucket be destroyable?"
   type = bool
   default = true

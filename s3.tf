@@ -5,7 +5,7 @@ resource "aws_s3_bucket" "log_bucket" {
   tags   = merge(var.tags, { Name = "${var.bucket_name}-logs", Purpose = "access-logs" })
 
   lifecycle {
-    prevent_destroy = var.log_bucket_prevent_destroy
+    prevent_destroy = var.prevent_bucket_destroy
   }
 }
 
@@ -116,7 +116,7 @@ resource "aws_s3_bucket" "website_bucket" {
   tags   = merge(var.tags, { Name = var.bucket_name })
 
   lifecycle {
-    prevent_destroy = var.log_bucket_prevent_destroy
+    prevent_destroy = var.prevent_bucket_destroy
   }
 }
 

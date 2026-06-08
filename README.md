@@ -70,7 +70,7 @@ module "static_website" {
 | `email_records` | object | `null` | Email DNS configuration (required if `include_email_records` is true) |
 | `log_retention_days` | number | `90` | S3 and CloudFront log retention days |
 | `enable_log_bucket` | bool | `true` | Create an S3 logging bucket for S3 and CloudFront access logs |
-| `log_bucket_prevent_destroy` | bool | `true` | Protect the log and website S3 buckets from accidental destruction |
+| `prevent_bucket_destroy` | bool | `true` | Protect the log and website S3 buckets from accidental destruction |
 | `content_security_policy` | string | `default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'` | Content Security Policy header value |
 | `enable_dnssec` | bool | `false` | Enable DNSSEC on the hosted zone |
 | `dnssec_kms_key_arn` | string | `null` | Existing KMS key ARN for DNSSEC signing |
@@ -105,4 +105,4 @@ module "static_website" {
 - Set `deploy_to_prod = true` to enable HTTPS and custom domain support.
 - Use `existing_zone_id` with `deploy_hosted_zone = false` if you already manage the domain in Route 53.
 - `enable_log_bucket = false` disables the log bucket, S3 access logging, and CloudFront logging entirely.
-- `log_bucket_prevent_destroy = false` allows Terraform to destroy both the log and website buckets (use with caution).
+- `prevent_bucket_destroy = false` allows Terraform to destroy both the log and website buckets (use with caution).
