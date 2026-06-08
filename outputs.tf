@@ -30,7 +30,7 @@ output "s3_bucket_arn" {
 
 output "s3_log_bucket_name" {
   description = "The name of the access log S3 bucket"
-  value       = aws_s3_bucket.log_bucket.bucket
+  value       = var.enable_log_bucket ? aws_s3_bucket.log_bucket[0].bucket : null
 }
 
 output "route53_zone_id" {

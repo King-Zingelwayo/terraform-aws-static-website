@@ -90,6 +90,17 @@ variable "include_email_records" {
   default     = false
 }
 
+variable "log_bucket_prevent_destroy" {
+  description = "should this bucket be destroyable?"
+  type = bool
+  default = true
+}
+
+variable "enable_log_bucket" {
+  description = "Create and attach an S3 logging bucket for S3 and CloudFront access logs"
+  type        = bool
+  default     = true
+}
 variable "log_retention_days" {
   description = "Number of days to retain S3 and CloudFront access logs"
   type        = number

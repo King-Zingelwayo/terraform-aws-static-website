@@ -62,10 +62,13 @@ resource "aws_cloudfront_distribution" "website_distribution" {
   web_acl_id = var.enable_waf ? aws_wafv2_web_acl.cloudfront_waf[0].arn : null
 
   # checkov CKV_AWS_86 / tfsec aws-cloudfront-enable-logging
-  logging_config {
-    bucket          = aws_s3_bucket.log_bucket.bucket_domain_name
-    include_cookies = false
-    prefix          = "cloudfront-access-logs/"
+  dynamic "logging_config" {
+    for_each = var.enable_log_bucket ? [1] : []
+    content {
+      bucket          = aws_s3_bucket.log_bucket[0].bucket_domain_name
+      include_cookies = false
+      prefix          = "cloudfront-access-logs/"
+    }
   }
 
   default_cache_behavior {
