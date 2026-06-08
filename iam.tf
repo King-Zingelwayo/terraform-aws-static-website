@@ -1,6 +1,6 @@
 # S3 Bucket Policy for CloudFront OAC + enforce HTTPS-only
 resource "aws_s3_bucket_policy" "website_bucket_policy" {
-  bucket = aws_s3_bucket.website_bucket.id
+  bucket = local.website_bucket.id
 
   # depends_on prevents race condition where policy is applied before PAB is set
   depends_on = [aws_s3_bucket_public_access_block.website_bucket_pab]
@@ -15,7 +15,7 @@ resource "aws_s3_bucket_policy" "website_bucket_policy" {
           Service = "cloudfront.amazonaws.com"
         }
         Action   = "s3:GetObject"
-        Resource = "${aws_s3_bucket.website_bucket.arn}/*"
+        Resource = "${local.website_bucket.arn}/*"
         Condition = {
           StringEquals = {
             "AWS:SourceArn" = aws_cloudfront_distribution.website_distribution.arn
@@ -28,8 +28,8 @@ resource "aws_s3_bucket_policy" "website_bucket_policy" {
         Principal = "*"
         Action    = "s3:*"
         Resource = [
-          aws_s3_bucket.website_bucket.arn,
-          "${aws_s3_bucket.website_bucket.arn}/*"
+          local.website_bucket.arn,
+          "${local.website_bucket.arn}/*"
         ]
         Condition = {
           Bool = {

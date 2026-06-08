@@ -45,9 +45,9 @@ resource "aws_cloudfront_origin_access_control" "website_oac" {
 resource "aws_cloudfront_distribution" "website_distribution" {
   depends_on = [aws_s3_bucket_policy.log_bucket_policy]
   origin {
-    domain_name              = aws_s3_bucket.website_bucket.bucket_regional_domain_name
+    domain_name              = local.website_bucket.bucket_regional_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.website_oac.id
-    origin_id                = "S3-${aws_s3_bucket.website_bucket.bucket}"
+    origin_id                = "S3-${local.website_bucket.bucket}"
   }
 
   enabled             = true
@@ -65,7 +65,7 @@ resource "aws_cloudfront_distribution" "website_distribution" {
   dynamic "logging_config" {
     for_each = var.enable_log_bucket ? [1] : []
     content {
-      bucket          = aws_s3_bucket.log_bucket[0].bucket_domain_name
+      bucket          = local.log_bucket.bucket_domain_name
       include_cookies = false
       prefix          = "cloudfront-access-logs/"
     }
@@ -74,7 +74,7 @@ resource "aws_cloudfront_distribution" "website_distribution" {
   default_cache_behavior {
     allowed_methods                = ["GET", "HEAD"]
     cached_methods                 = ["GET", "HEAD"]
-    target_origin_id               = "S3-${aws_s3_bucket.website_bucket.bucket}"
+    target_origin_id               = "S3-${local.website_bucket.bucket}"
     compress                       = true
     viewer_protocol_policy         = "redirect-to-https"
     response_headers_policy_id     = aws_cloudfront_response_headers_policy.security_headers.id

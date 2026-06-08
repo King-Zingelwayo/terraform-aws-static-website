@@ -1,17 +1,23 @@
 # S3 logging bucket
 resource "aws_s3_bucket" "log_bucket" {
-  count  = var.enable_log_bucket ? 1 : 0
+  count  = var.enable_log_bucket && var.prevent_bucket_destroy ? 1 : 0
   bucket = "${var.bucket_name}-logs"
   tags   = merge(var.tags, { Name = "${var.bucket_name}-logs", Purpose = "access-logs" })
 
   lifecycle {
-    prevent_destroy = var.prevent_bucket_destroy
+    prevent_destroy = true
   }
+}
+
+resource "aws_s3_bucket" "log_bucket_unprotected" {
+  count  = var.enable_log_bucket && !var.prevent_bucket_destroy ? 1 : 0
+  bucket = "${var.bucket_name}-logs"
+  tags   = merge(var.tags, { Name = "${var.bucket_name}-logs", Purpose = "access-logs" })
 }
 
 resource "aws_s3_bucket_ownership_controls" "log_bucket_ownership" {
   count  = var.enable_log_bucket ? 1 : 0
-  bucket = aws_s3_bucket.log_bucket[0].id
+  bucket = local.log_bucket.id
   rule {
     object_ownership = "BucketOwnerPreferred"
   }
@@ -20,7 +26,7 @@ resource "aws_s3_bucket_ownership_controls" "log_bucket_ownership" {
 resource "aws_s3_bucket_public_access_block" "log_bucket_pab" {
   count                   = var.enable_log_bucket ? 1 : 0
   depends_on              = [aws_s3_bucket_ownership_controls.log_bucket_ownership]
-  bucket                  = aws_s3_bucket.log_bucket[0].id
+  bucket                  = local.log_bucket.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -29,7 +35,7 @@ resource "aws_s3_bucket_public_access_block" "log_bucket_pab" {
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "log_bucket_sse" {
   count  = var.enable_log_bucket ? 1 : 0
-  bucket = aws_s3_bucket.log_bucket[0].id
+  bucket = local.log_bucket.id
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -40,7 +46,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "log_bucket_sse" {
 resource "aws_s3_bucket_versioning" "log_bucket_versioning" {
   count      = var.enable_log_bucket ? 1 : 0
   depends_on = [aws_s3_bucket_public_access_block.log_bucket_pab]
-  bucket     = aws_s3_bucket.log_bucket[0].id
+  bucket     = local.log_bucket.id
   versioning_configuration {
     status = "Enabled"
   }
@@ -49,7 +55,7 @@ resource "aws_s3_bucket_versioning" "log_bucket_versioning" {
 # Expire logs after retention period and clean up old versions
 resource "aws_s3_bucket_lifecycle_configuration" "log_bucket_lifecycle" {
   count  = var.enable_log_bucket ? 1 : 0
-  bucket = aws_s3_bucket.log_bucket[0].id
+  bucket = local.log_bucket.id
 
   rule {
     id     = "expire-logs"
@@ -70,7 +76,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "log_bucket_lifecycle" {
 # Allow CloudFront logging service principal + deny non-HTTPS
 resource "aws_s3_bucket_policy" "log_bucket_policy" {
   count  = var.enable_log_bucket ? 1 : 0
-  bucket = aws_s3_bucket.log_bucket[0].id
+  bucket = local.log_bucket.id
 
   depends_on = [aws_s3_bucket_public_access_block.log_bucket_pab]
 
@@ -84,7 +90,7 @@ resource "aws_s3_bucket_policy" "log_bucket_policy" {
           Service = "delivery.logs.amazonaws.com"
         }
         Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.log_bucket[0].arn}/cloudfront-access-logs/*"
+        Resource = "${local.log_bucket.arn}/cloudfront-access-logs/*"
         Condition = {
           StringEquals = {
             "s3:x-amz-acl" = "bucket-owner-full-control"
@@ -97,8 +103,8 @@ resource "aws_s3_bucket_policy" "log_bucket_policy" {
         Principal = "*"
         Action    = "s3:*"
         Resource = [
-          aws_s3_bucket.log_bucket[0].arn,
-          "${aws_s3_bucket.log_bucket[0].arn}/*"
+          local.log_bucket.arn,
+          "${local.log_bucket.arn}/*"
         ]
         Condition = {
           Bool = {
@@ -112,16 +118,23 @@ resource "aws_s3_bucket_policy" "log_bucket_policy" {
 
 # S3 Bucket for static website
 resource "aws_s3_bucket" "website_bucket" {
+  count  = var.prevent_bucket_destroy ? 1 : 0
   bucket = var.bucket_name
   tags   = merge(var.tags, { Name = var.bucket_name })
 
   lifecycle {
-    prevent_destroy = var.prevent_bucket_destroy
+    prevent_destroy = true
   }
 }
 
+resource "aws_s3_bucket" "website_bucket_unprotected" {
+  count  = !var.prevent_bucket_destroy ? 1 : 0
+  bucket = var.bucket_name
+  tags   = merge(var.tags, { Name = var.bucket_name })
+}
+
 resource "aws_s3_bucket_public_access_block" "website_bucket_pab" {
-  bucket                  = aws_s3_bucket.website_bucket.id
+  bucket                  = local.website_bucket.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -129,7 +142,7 @@ resource "aws_s3_bucket_public_access_block" "website_bucket_pab" {
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "website_bucket_sse" {
-  bucket = aws_s3_bucket.website_bucket.id
+  bucket = local.website_bucket.id
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -139,7 +152,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "website_bucket_ss
 
 resource "aws_s3_bucket_versioning" "website_bucket_versioning" {
   depends_on = [aws_s3_bucket_public_access_block.website_bucket_pab]
-  bucket     = aws_s3_bucket.website_bucket.id
+  bucket     = local.website_bucket.id
   versioning_configuration {
     status = "Enabled"
   }
@@ -147,7 +160,7 @@ resource "aws_s3_bucket_versioning" "website_bucket_versioning" {
 
 resource "aws_s3_bucket_logging" "website_bucket_logging" {
   count         = var.enable_log_bucket ? 1 : 0
-  bucket        = aws_s3_bucket.website_bucket.id
-  target_bucket = aws_s3_bucket.log_bucket[0].id
+  bucket        = local.website_bucket.id
+  target_bucket = local.log_bucket.id
   target_prefix = "s3-access-logs/"
 }

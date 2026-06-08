@@ -20,17 +20,17 @@ output "website_url" {
 
 output "s3_bucket_name" {
   description = "The name of the website S3 bucket"
-  value       = aws_s3_bucket.website_bucket.bucket
+  value       = local.website_bucket.bucket
 }
 
 output "s3_bucket_arn" {
   description = "The ARN of the website S3 bucket"
-  value       = aws_s3_bucket.website_bucket.arn
+  value       = local.website_bucket.arn
 }
 
 output "s3_log_bucket_name" {
   description = "The name of the access log S3 bucket"
-  value       = var.enable_log_bucket ? aws_s3_bucket.log_bucket[0].bucket : null
+  value       = var.enable_log_bucket ? local.log_bucket.bucket : null
 }
 
 output "route53_zone_id" {
