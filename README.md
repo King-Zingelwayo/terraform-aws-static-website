@@ -28,6 +28,10 @@ This module provisions:
 
 ## Example Usage
 
+### Minimal — dev/staging
+
+No custom domain, no ACM, no WAF. Uses the default CloudFront URL.
+
 ```hcl
 module "static_website" {
   source = "./modules/terraform-aws-static-website"
@@ -36,11 +40,25 @@ module "static_website" {
     aws.us_east_1 = aws.us_east_1
   }
 
-  region             = "eu-west-1"
-  deploy_to_prod     = true
-  deploy_hosted_zone = true
+  domain_name = "example.com"
+  bucket_name = "example-com-website"
+}
+```
+
+### Production — custom domain with ACM and WAF
+
+```hcl
+module "static_website" {
+  source = "./modules/terraform-aws-static-website"
+
+  providers = {
+    aws.us_east_1 = aws.us_east_1
+  }
+
   domain_name        = "example.com"
   bucket_name        = "example-com-website"
+  deploy_to_prod     = true
+  deploy_hosted_zone = true
   enable_waf         = true
 
   subdomains = [
@@ -49,6 +67,103 @@ module "static_website" {
       target_type = "cloudfront"
     }
   ]
+}
+```
+
+### Production — with API Gateway origin
+
+Routes `/api/*` to API Gateway, everything else to S3.
+
+```hcl
+module "static_website" {
+  source = "./modules/terraform-aws-static-website"
+
+  providers = {
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  domain_name        = "app.example.com"
+  bucket_name        = "example-com-website"
+  deploy_to_prod     = true
+  deploy_hosted_zone = true
+  enable_waf         = true
+
+  api_origins = [
+    {
+      origin_id       = "main-api"
+      api_gateway_url = "https://abc123.execute-api.eu-west-1.amazonaws.com/prod"
+      path_patterns   = ["/api/*"]
+    }
+  ]
+}
+
+# Reference the origin secret in your API Gateway resource policy
+data "aws_ssm_parameter" "api_origin_secret" {
+  name = module.static_website.api_origin_secret_arns["main-api"]
+}
+```
+
+### Production — existing hosted zone
+
+Use when the Route 53 zone already exists and you don't want Terraform to recreate it.
+
+```hcl
+module "static_website" {
+  source = "./modules/terraform-aws-static-website"
+
+  providers = {
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  domain_name        = "example.com"
+  bucket_name        = "example-com-website"
+  deploy_to_prod     = true
+  deploy_hosted_zone = false
+  existing_zone_id   = "Z08578232AQ4K9C2854A3"
+  enable_waf         = true
+}
+```
+
+### Production — with subdomains, email, and DNSSEC
+
+```hcl
+module "static_website" {
+  source = "./modules/terraform-aws-static-website"
+
+  providers = {
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  domain_name        = "example.com"
+  bucket_name        = "example-com-website"
+  deploy_to_prod     = true
+  deploy_hosted_zone = true
+  enable_waf         = true
+  enable_dnssec      = true
+
+  subdomains = [
+    {
+      name        = "www"
+      target_type = "cloudfront"
+    },
+    {
+      name        = "app"
+      target_type = "cloudfront"
+    },
+    {
+      name         = "api"
+      target_type  = "alb"
+      alb_dns_name = "my-alb-123.eu-west-1.elb.amazonaws.com"
+      alb_zone_id  = "Z32O12XQLNTSW2"
+    }
+  ]
+
+  include_email_records = true
+  email_records = {
+    mx_record  = { priority = 10, value = "mail.example.com" }
+    webmail_ip = "1.2.3.4"
+    mail_ip    = "1.2.3.4"
+  }
 }
 ```
 
