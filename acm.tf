@@ -4,11 +4,13 @@ resource "aws_acm_certificate" "website_cert" {
 
   domain_name               = var.domain_name
   subject_alternative_names = [for s in var.subdomains : "${s.name}.${var.domain_name}" if s.target_type == "cloudfront"]
-  validation_method = "DNS"
+  validation_method         = "DNS"
 
   tags = merge(var.tags, { Name = var.domain_name })
 
   lifecycle {
     create_before_destroy = true
   }
+
+  depends_on = [aws_route53_zone.website_zone]
 }

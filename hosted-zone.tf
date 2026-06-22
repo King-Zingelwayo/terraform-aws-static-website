@@ -104,6 +104,8 @@ resource "aws_route53_record" "cert_validation" {
     }
   } : {}
 
+  depends_on = [aws_route53_zone.website_zone]
+
   allow_overwrite = true
   name            = each.value.name
   records         = [each.value.record]
@@ -118,6 +120,8 @@ resource "aws_acm_certificate_validation" "website_cert_validation" {
   provider                = aws.us_east_1
   certificate_arn         = aws_acm_certificate.website_cert[0].arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+
+  depends_on = [aws_route53_record.cert_validation]
 }
 
 # Email DNS records (MX, webmail A, mail A)

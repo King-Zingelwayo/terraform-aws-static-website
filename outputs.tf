@@ -51,3 +51,8 @@ output "subdomain_fqdns" {
     { for k, v in aws_route53_record.subdomain_a : k => v.fqdn }
   )
 }
+
+output "api_origin_secret_arns" {
+  description = "SSM Parameter ARNs for each API origin secret — reference these in your API Gateway resource policy"
+  value       = { for k, v in aws_ssm_parameter.origin_secret : k => v.arn }
+}

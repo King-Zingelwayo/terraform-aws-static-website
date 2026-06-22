@@ -75,6 +75,14 @@ module "static_website" {
 | `enable_dnssec` | bool | `false` | Enable DNSSEC on the hosted zone |
 | `dnssec_kms_key_arn` | string | `null` | Existing KMS key ARN for DNSSEC signing |
 | `enable_waf` | bool | `false` | Attach an AWS WAF Web ACL to CloudFront |
+| `api_origins` | list(object) | `[]` | API Gateway origins to attach to CloudFront |
+
+### API origin object schema
+
+- `origin_id` - unique identifier for the origin (e.g. `main-api`)
+- `api_gateway_url` - full HTTPS URL of the API Gateway stage (e.g. `https://abc123.execute-api.eu-west-1.amazonaws.com/prod`)
+- `path_patterns` - list of CloudFront path patterns to route to this origin (e.g. `["/api/*"]`)
+- `allowed_methods` - HTTP methods to allow (default: all methods)
 
 ### Subdomain object schema
 
@@ -97,6 +105,7 @@ module "static_website" {
 | `s3_log_bucket_name` | Access log S3 bucket name |
 | `route53_zone_id` | Route 53 hosted zone ID |
 | `route53_nameservers` | Hosted zone nameservers (when created) |
+| `api_origin_secret_arns` | Map of SSM Parameter ARNs for each API origin secret |
 | `subdomain_fqdns` | FQDNs of created subdomains |
 
 ## Notes
@@ -104,5 +113,6 @@ module "static_website" {
 - `www.${var.domain_name}` is not provisioned unless added via `subdomains`.
 - Set `deploy_to_prod = true` to enable HTTPS and custom domain support.
 - Use `existing_zone_id` with `deploy_hosted_zone = false` if you already manage the domain in Route 53.
+- API Gateway origins are secured with a per-origin secret stored in SSM Parameter Store (`/cloudfront/<origin_id>/origin-secret`). Reference `api_origin_secret_arns` in your API Gateway resource policy to restrict access to CloudFront only.
 - `enable_log_bucket = false` disables the log bucket, S3 access logging, and CloudFront logging entirely.
 - `prevent_bucket_destroy = false` allows Terraform to destroy both the log and website buckets (use with caution).
