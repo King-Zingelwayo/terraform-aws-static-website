@@ -32,56 +32,26 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
-variable "deploy_to_prod" {
-  description = "Deploy to production with ACM certificate and Route 53"
+variable "enable_acm" {
+  description = "Enable ACM certificate and HTTPS for CloudFront"
   type        = bool
   default     = false
 }
-variable "deploy_hosted_zone" {
-  description = "Deploy Route 53 hosted zone"
-  type        = bool
-  default     = false
-}
-
-variable "existing_zone_id" {
-  description = "ID of an existing Route 53 hosted zone to use instead of creating a new one"
+variable "zone_id" {
+  description = "Route 53 hosted zone ID to create DNS records in. Required when enable_acm is true."
   type        = string
   default     = null
+
+  validation {
+    condition     = !var.enable_acm || var.zone_id != null
+    error_message = "zone_id is required when enable_acm is true."
+  }
 }
 
 variable "subdomains" {
-  description = "Optional subdomains to create as Route 53 alias or A records"
-  type = list(object({
-    name        = string
-    target_type = string # "cloudfront", "alb", or "a_record"
-    alb_dns_name = optional(string)
-    alb_zone_id  = optional(string)
-    a_record_ips = optional(list(string))
-  }))
-  default = []
-
-  validation {
-    condition = alltrue([
-      for s in var.subdomains : contains(["cloudfront", "alb", "a_record"], s.target_type)
-    ])
-    error_message = "target_type must be one of: cloudfront, alb, a_record."
-  }
-
-  validation {
-    condition = alltrue([
-      for s in var.subdomains :
-      s.target_type == "alb" ? (s.alb_dns_name != null && s.alb_zone_id != null) : true
-    ])
-    error_message = "alb_dns_name and alb_zone_id are required when target_type is alb."
-  }
-
-  validation {
-    condition = alltrue([
-      for s in var.subdomains :
-      s.target_type == "a_record" ? s.a_record_ips != null : true
-    ])
-    error_message = "a_record_ips is required when target_type is a_record."
-  }
+  description = "Additional CloudFront subdomain aliases to create as Route 53 records"
+  type        = list(string)
+  default     = []
 }
 
 variable "include_email_records" {
@@ -118,17 +88,6 @@ variable "content_security_policy" {
   default     = "default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'"
 }
 
-variable "enable_dnssec" {
-  description = "Enable DNSSEC on the Route 53 hosted zone. A KMS key will be auto-created unless dnssec_kms_key_arn is provided."
-  type        = bool
-  default     = false
-}
-
-variable "dnssec_kms_key_arn" {
-  description = "ARN of an existing KMS key (ECC_NIST_P256, us-east-1) for DNSSEC. If null and enable_dnssec is true, a key is created automatically."
-  type        = string
-  default     = null
-}
 
 variable "enable_waf" {
   description = "Create a WAF Web ACL with AWS managed rules and attach it to the CloudFront distribution"

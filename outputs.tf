@@ -15,7 +15,7 @@ output "cloudfront_domain_name" {
 
 output "website_url" {
   description = "The live website URL"
-  value       = var.deploy_to_prod ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.website_distribution.domain_name}"
+  value       = var.enable_acm ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.website_distribution.domain_name}"
 }
 
 output "s3_bucket_name" {
@@ -34,22 +34,13 @@ output "s3_log_bucket_name" {
 }
 
 output "route53_zone_id" {
-  description = "The Route 53 hosted zone ID (set when deploy_hosted_zone or deploy_to_prod is true)"
-  value       = local.zone_id
-}
-
-output "route53_nameservers" {
-  description = "Nameservers for the Route 53 hosted zone — use these to delegate the domain at your registrar"
-  value       = local.create_zone ? aws_route53_zone.website_zone[0].name_servers : []
+  description = "The Route 53 hosted zone ID"
+  value       = var.zone_id
 }
 
 output "subdomain_fqdns" {
   description = "FQDNs of all created subdomains"
-  value = merge(
-    { for k, v in aws_route53_record.subdomain_cloudfront : k => v.fqdn },
-    { for k, v in aws_route53_record.subdomain_alb : k => v.fqdn },
-    { for k, v in aws_route53_record.subdomain_a : k => v.fqdn }
-  )
+  value       = { for k, v in aws_route53_record.subdomain_cloudfront : k => v.fqdn }
 }
 
 output "api_origin_secret_arns" {
