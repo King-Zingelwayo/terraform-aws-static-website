@@ -37,8 +37,3 @@ output "subdomain_fqdns" {
   description = "FQDNs of all created subdomains"
   value       = { for k, v in aws_route53_record.subdomain_cloudfront : k => v.fqdn }
 }
-
-output "api_origin_secret_names" {
-  description = "SSM Parameter names for each API origin secret — use these in your API Gateway Terraform to read the secret value and enforce CloudFront-only access via a resource policy"
-  value       = { for k, v in aws_ssm_parameter.origin_secret : k => v.name }
-}

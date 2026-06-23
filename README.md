@@ -97,7 +97,7 @@ module "static_website" {
 
 Routes `/api/*` to API Gateway, everything else to S3.
 
-The module auto-generates a secret per origin, injects it as `x-origin-secret` custom header from CloudFront, and stores it in SSM Parameter Store. Your API Gateway resource policy uses this secret to deny any request not coming through CloudFront.
+CloudFront is enforced at the AWS signing layer via an IAM resource policy with an `AWS:SourceArn` condition pinned to the CloudFront distribution ARN — no shared secrets required.
 
 ```hcl
 module "static_website" {
@@ -122,11 +122,6 @@ module "static_website" {
   ]
 }
 
-# In your API Gateway Terraform — read the secret value from SSM
-data "aws_ssm_parameter" "origin_secret" {
-  name = module.static_website.api_origin_secret_names["main-api"]
-}
-
 # Enforce CloudFront-only access via API Gateway resource policy
 resource "aws_api_gateway_rest_api_policy" "api_policy" {
   rest_api_id = aws_api_gateway_rest_api.main.id
@@ -139,15 +134,9 @@ resource "aws_api_gateway_rest_api_policy" "api_policy" {
         Principal = "*"
         Action    = "execute-api:Invoke"
         Resource  = "${aws_api_gateway_rest_api.main.execution_arn}/*"
-      },
-      {
-        Effect    = "Deny"
-        Principal = "*"
-        Action    = "execute-api:Invoke"
-        Resource  = "${aws_api_gateway_rest_api.main.execution_arn}/*"
         Condition = {
-          StringNotEquals = {
-            "aws:RequestHeader/x-origin-secret" = data.aws_ssm_parameter.origin_secret.value
+          ArnLike = {
+            "AWS:SourceArn" = module.static_website.cloudfront_distribution_arn
           }
         }
       }
@@ -263,7 +252,6 @@ module "static_website" {
 | `s3_log_bucket_name` | Access log S3 bucket name (`null` when `enable_log_bucket = false`) |
 | `route53_zone_id` | Route 53 hosted zone ID |
 | `route53_nameservers` | Hosted zone nameservers (when created) |
-| `api_origin_secret_names` | Map of SSM Parameter names for each API origin secret — use in your API Gateway resource policy |
 | `subdomain_fqdns` | FQDNs of all created subdomains |
 
 ## Notes
@@ -271,7 +259,7 @@ module "static_website" {
 - Set `deploy_to_prod = true` to enable ACM, custom domain aliases, and Route 53 records.
 - Set `deploy_to_prod = false` to use the default CloudFront URL (e.g. for dev/staging).
 - Use `existing_zone_id` with `deploy_hosted_zone = false` if the zone already exists in Route 53.
-- API Gateway origins are secured with a per-origin secret injected by CloudFront as `x-origin-secret`. Use `api_origin_secret_names` to read the secret value from SSM and enforce it in your API Gateway resource policy.
+- API Gateway origins are secured via an IAM resource policy with `AWS:SourceArn` pinned to the CloudFront distribution ARN. Use `cloudfront_distribution_arn` output in your API Gateway resource policy.
 - `enable_log_bucket = false` disables the log bucket, S3 access logging, and CloudFront logging entirely.
 - `prevent_bucket_destroy = false` allows Terraform to destroy both the log and website buckets (use with caution).
 - `enable_dnssec` requires `deploy_hosted_zone = true`.
