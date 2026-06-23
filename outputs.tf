@@ -28,11 +28,6 @@ output "s3_bucket_arn" {
   value       = local.website_bucket.arn
 }
 
-output "s3_log_bucket_name" {
-  description = "The name of the access log S3 bucket"
-  value       = var.enable_log_bucket ? local.log_bucket.bucket : null
-}
-
 output "route53_zone_id" {
   description = "The Route 53 hosted zone ID"
   value       = var.zone_id

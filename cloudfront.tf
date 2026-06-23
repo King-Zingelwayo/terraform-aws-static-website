@@ -43,8 +43,6 @@ resource "aws_cloudfront_origin_access_control" "website_oac" {
 
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "website_distribution" {
-  depends_on = [aws_s3_bucket_policy.log_bucket_policy]
-
   origin {
     domain_name              = local.website_bucket.bucket_regional_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.website_oac.id
@@ -80,11 +78,11 @@ resource "aws_cloudfront_distribution" "website_distribution" {
 
   web_acl_id = var.enable_waf ? aws_wafv2_web_acl.cloudfront_waf[0].arn : null
   dynamic "logging_config" {
-    for_each = var.enable_log_bucket ? [1] : []
+    for_each = local.logging_enabled ? [1] : []
     content {
-      bucket          = local.log_bucket.bucket_domain_name
+      bucket          = var.logging.bucket_domain_name
       include_cookies = false
-      prefix          = "cloudfront-access-logs/"
+      prefix          = var.logging.cloudfront_prefix
     }
   }
 

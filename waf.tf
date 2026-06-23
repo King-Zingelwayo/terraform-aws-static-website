@@ -99,36 +99,10 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
   tags = merge(var.tags, { Name = "${var.bucket_name}-waf" })
 }
 
-# WAF requires a dedicated log bucket with name prefix aws-waf-logs-
-resource "aws_s3_bucket" "waf_log_bucket" {
-  count  = var.enable_waf ? 1 : 0
-  bucket = "aws-waf-logs-${var.bucket_name}"
-  tags   = merge(var.tags, { Name = "aws-waf-logs-${var.bucket_name}" })
-}
-
-resource "aws_s3_bucket_public_access_block" "waf_log_bucket_pab" {
-  count                   = var.enable_waf ? 1 : 0
-  bucket                  = aws_s3_bucket.waf_log_bucket[0].id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "waf_log_bucket_sse" {
-  count  = var.enable_waf ? 1 : 0
-  bucket = aws_s3_bucket.waf_log_bucket[0].id
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-# WAF logging — required to inspect blocked requests in production
+# WAF logging
 resource "aws_wafv2_web_acl_logging_configuration" "cloudfront_waf_logging" {
-  count                   = var.enable_waf ? 1 : 0
+  count                   = var.enable_waf && local.logging_enabled ? 1 : 0
   provider                = aws.us_east_1
-  log_destination_configs = [aws_s3_bucket.waf_log_bucket[0].arn]
+  log_destination_configs = [var.logging.bucket_arn]
   resource_arn            = aws_wafv2_web_acl.cloudfront_waf[0].arn
 }

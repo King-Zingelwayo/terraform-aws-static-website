@@ -1,7 +1,7 @@
 # Plan-time locals — derived purely from variables, always known during plan
 locals {
-  website_bucket = var.prevent_bucket_destroy ? aws_s3_bucket.website_bucket[0] : aws_s3_bucket.website_bucket_unprotected[0]
-  log_bucket     = var.enable_log_bucket ? (var.prevent_bucket_destroy ? aws_s3_bucket.log_bucket[0] : aws_s3_bucket.log_bucket_unprotected[0]) : null
+  website_bucket  = aws_s3_bucket.website_bucket
+  logging_enabled = var.logging.enabled
 
   create_email = var.enable_acm && var.include_email_records
 

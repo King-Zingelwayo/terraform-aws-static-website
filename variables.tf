@@ -60,25 +60,24 @@ variable "include_email_records" {
   default     = false
 }
 
-variable "prevent_bucket_destroy" {
-  description = "should this bucket be destroyable?"
-  type = bool
-  default = true
-}
-
-variable "enable_log_bucket" {
-  description = "Create and attach an S3 logging bucket for S3 and CloudFront access logs"
-  type        = bool
-  default     = true
-}
-variable "log_retention_days" {
-  description = "Number of days to retain S3 and CloudFront access logs"
-  type        = number
-  default     = 90
+variable "logging" {
+  description = "Central logging bucket configuration. Set enabled = true and provide bucket details to activate logging for S3, CloudFront, and WAF."
+  type = object({
+    enabled            = bool
+    bucket_id          = optional(string)
+    bucket_arn         = optional(string)
+    bucket_domain_name = optional(string)
+    s3_prefix          = optional(string, "s3-access-logs/")
+    cloudfront_prefix  = optional(string, "cloudfront-access-logs/")
+    waf_prefix         = optional(string, "waf-logs/")
+  })
+  default = {
+    enabled = false
+  }
 
   validation {
-    condition     = var.log_retention_days > 0
-    error_message = "log_retention_days must be greater than 0."
+    condition     = !var.logging.enabled || (var.logging.bucket_id != null && var.logging.bucket_arn != null && var.logging.bucket_domain_name != null)
+    error_message = "logging.bucket_id, logging.bucket_arn, and logging.bucket_domain_name are required when logging.enabled is true."
   }
 }
 
