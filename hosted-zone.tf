@@ -134,21 +134,6 @@ resource "aws_route53_record" "email_records" {
   records  = each.value.records
 }
 
-# Optional subdomain records — CloudFront alias, ALB alias, or plain A record
-locals {
-  subdomain_cloudfront = local.use_zone ? {
-    for s in var.subdomains : s.name => s if s.target_type == "cloudfront"
-  } : {}
-
-  subdomain_alb = local.use_zone ? {
-    for s in var.subdomains : s.name => s if s.target_type == "alb"
-  } : {}
-
-  subdomain_a = local.use_zone ? {
-    for s in var.subdomains : s.name => s if s.target_type == "a_record"
-  } : {}
-}
-
 resource "aws_route53_record" "subdomain_cloudfront" {
   for_each = local.subdomain_cloudfront
   zone_id  = local.zone_id
