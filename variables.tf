@@ -94,22 +94,6 @@ variable "enable_waf" {
   default     = false
 }
 
-variable "api_origins" {
-  description = "API Gateway origins to attach to CloudFront"
-  type = list(object({
-    origin_id       = string
-    api_gateway_url = string
-    path_patterns   = list(string)
-    allowed_methods = optional(list(string), ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"])
-  }))
-  default = []
-
-  validation {
-    condition     = alltrue([for o in var.api_origins : startswith(o.api_gateway_url, "https://")])
-    error_message = "api_gateway_url must start with https://."
-  }
-}
-
 variable "email_records" {
   description = "Email DNS records configuration"
   type = object({

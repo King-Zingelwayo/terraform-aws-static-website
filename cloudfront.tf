@@ -49,23 +49,6 @@ resource "aws_cloudfront_distribution" "website_distribution" {
     origin_id                = "S3-${local.website_bucket.bucket}"
   }
 
-  # API Gateway origins
-  dynamic "origin" {
-    for_each = { for o in var.api_origins : o.origin_id => o }
-    content {
-      domain_name = regex("https?://([^/]+)", origin.value.api_gateway_url)[0]
-      origin_id   = origin.value.origin_id
-      origin_path = regex("https?://[^/]+(/.+)", origin.value.api_gateway_url)[0]
-
-      custom_origin_config {
-        http_port              = 80
-        https_port             = 443
-        origin_protocol_policy = "https-only"
-        origin_ssl_protocols   = ["TLSv1.2"]
-      }
-    }
-  }
-
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = var.website_setup["index_document"]
@@ -94,31 +77,6 @@ resource "aws_cloudfront_distribution" "website_distribution" {
       cookies {
         forward = "none"
       }
-    }
-  }
-
-  # API Gateway cache behaviours — one per path pattern per origin
-  dynamic "ordered_cache_behavior" {
-    for_each = flatten([
-      for o in var.api_origins : [
-        for path in o.path_patterns : {
-          origin_id       = o.origin_id
-          path_pattern    = path
-          allowed_methods = o.allowed_methods
-        }
-      ]
-    ])
-    content {
-      path_pattern           = ordered_cache_behavior.value.path_pattern
-      target_origin_id       = ordered_cache_behavior.value.origin_id
-      allowed_methods        = ordered_cache_behavior.value.allowed_methods
-      cached_methods         = ["GET", "HEAD"]
-      viewer_protocol_policy = "redirect-to-https"
-      compress               = true
-
-      # Disable caching for API responses
-      cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # CachingDisabled managed policy
-      origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # AllViewerExceptHostHeader managed policy
     }
   }
 
