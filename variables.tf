@@ -100,8 +100,9 @@ variable "email_records" {
   })
   default = null
 
+  // Validation to ensure that if email_records is provided, all required fields are present
   validation {
-    condition     = var.include_email_records ? var.email_records != null : true
-    error_message = "email_records must be provided when include_email_records is true."
+    condition     = var.email_records == null || (var.email_records.mx_record != null && var.email_records.webmail_ip != null && var.email_records.mail_ip != null)
+    error_message = "If email_records is provided, mx_record, webmail_ip, and mail_ip must all be specified."
   }
 }
