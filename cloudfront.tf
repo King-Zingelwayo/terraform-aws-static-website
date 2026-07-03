@@ -43,7 +43,6 @@ resource "aws_cloudfront_origin_access_control" "website_oac" {
 
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "website_distribution" {
-  depends_on = [aws_s3_bucket_policy.log_bucket_policy]
   origin {
     domain_name              = local.website_bucket.bucket_regional_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.website_oac.id
@@ -53,21 +52,15 @@ resource "aws_cloudfront_distribution" "website_distribution" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = var.website_setup["index_document"]
-  aliases = var.deploy_to_prod ? concat(
-    [var.domain_name],
-    [for s in var.subdomains : "${s.name}.${var.domain_name}" if s.target_type == "cloudfront"]
-  ) : []
+  aliases = var.enable_acm ? concat([var.domain_name], [for s in var.subdomains : "${s}.${var.domain_name}"]) : []
 
-  # checkov CKV_AWS_68 / tfsec aws-cloudfront-enable-waf
   web_acl_id = var.enable_waf ? aws_wafv2_web_acl.cloudfront_waf[0].arn : null
-
-  # checkov CKV_AWS_86 / tfsec aws-cloudfront-enable-logging
   dynamic "logging_config" {
-    for_each = var.enable_log_bucket ? [1] : []
+    for_each = local.logging_enabled ? [1] : []
     content {
-      bucket          = local.log_bucket.bucket_domain_name
+      bucket          = var.logging.bucket_domain_name
       include_cookies = false
-      prefix          = "cloudfront-access-logs/"
+      prefix          = var.logging.cloudfront_prefix
     }
   }
 
@@ -107,11 +100,10 @@ resource "aws_cloudfront_distribution" "website_distribution" {
   }
 
   viewer_certificate {
-    acm_certificate_arn            = var.deploy_to_prod ? aws_acm_certificate_validation.website_cert_validation[0].certificate_arn : null
-    ssl_support_method             = var.deploy_to_prod ? "sni-only" : null
-    cloudfront_default_certificate = !var.deploy_to_prod
-    # TLSv1.2_2021 is only valid with a custom cert; default CF cert requires TLSv1
-    minimum_protocol_version = var.deploy_to_prod ? "TLSv1.2_2021" : "TLSv1"
+    acm_certificate_arn            = var.enable_acm ? aws_acm_certificate_validation.website_cert_validation[0].certificate_arn : null
+    ssl_support_method             = var.enable_acm ? "sni-only" : null
+    cloudfront_default_certificate = !var.enable_acm
+    minimum_protocol_version = var.enable_acm ? "TLSv1.2_2021" : "TLSv1"
   }
 
   tags = var.tags
