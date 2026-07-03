@@ -54,12 +54,6 @@ variable "subdomains" {
   default     = []
 }
 
-variable "include_email_records" {
-  description = "Whether to create email DNS records"
-  type        = bool
-  default     = false
-}
-
 variable "logging" {
   description = "Central logging bucket configuration. Set enabled = true and provide bucket details to activate logging for S3, CloudFront, and WAF."
   type = object({
