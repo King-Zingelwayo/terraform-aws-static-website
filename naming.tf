@@ -3,7 +3,7 @@ locals {
   website_bucket  = aws_s3_bucket.website_bucket
   logging_enabled = var.logging.enabled
 
-  create_email = var.enable_acm && var.include_email_records
+  create_email = var.include_email_records
 
   subdomain_cloudfront = var.enable_acm ? { for s in var.subdomains : s => s } : {}
 }
