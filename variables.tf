@@ -106,3 +106,15 @@ variable "email_records" {
     error_message = "If email_records is provided, mx_record, webmail_ip, and mail_ip must all be specified."
   }
 }
+
+
+variable "cloudfront_function_associations" {
+  description = "CloudFront Function associations for the default cache behavior."
+
+  type = map(object({
+    event_type   = string
+    function_arn = string
+  }))
+
+  default = {}
+}

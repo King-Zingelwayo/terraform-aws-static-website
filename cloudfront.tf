@@ -52,7 +52,7 @@ resource "aws_cloudfront_distribution" "website_distribution" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = var.website_setup["index_document"]
-  aliases = var.enable_acm ? concat([var.domain_name], [for s in var.subdomains : "${s}.${var.domain_name}"]) : []
+  aliases             = var.enable_acm ? concat([var.domain_name], [for s in var.subdomains : "${s}.${var.domain_name}"]) : []
 
   web_acl_id = var.enable_waf ? aws_wafv2_web_acl.cloudfront_waf[0].arn : null
   dynamic "logging_config" {
@@ -65,17 +65,26 @@ resource "aws_cloudfront_distribution" "website_distribution" {
   }
 
   default_cache_behavior {
-    allowed_methods                = ["GET", "HEAD"]
-    cached_methods                 = ["GET", "HEAD"]
-    target_origin_id               = "S3-${local.website_bucket.bucket}"
-    compress                       = true
-    viewer_protocol_policy         = "redirect-to-https"
-    response_headers_policy_id     = aws_cloudfront_response_headers_policy.security_headers.id
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    target_origin_id           = "S3-${local.website_bucket.bucket}"
+    compress                   = true
+    viewer_protocol_policy     = "redirect-to-https"
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
 
     forwarded_values {
       query_string = false
       cookies {
         forward = "none"
+      }
+    }
+
+    dynamic "function_association" {
+      for_each = var.cloudfront_function_associations
+
+      content {
+        event_type   = function_association.value.event_type
+        function_arn = function_association.value.function_arn
       }
     }
   }
@@ -103,7 +112,7 @@ resource "aws_cloudfront_distribution" "website_distribution" {
     acm_certificate_arn            = var.enable_acm ? aws_acm_certificate_validation.website_cert_validation[0].certificate_arn : null
     ssl_support_method             = var.enable_acm ? "sni-only" : null
     cloudfront_default_certificate = !var.enable_acm
-    minimum_protocol_version = var.enable_acm ? "TLSv1.2_2021" : "TLSv1"
+    minimum_protocol_version       = var.enable_acm ? "TLSv1.2_2021" : "TLSv1"
   }
 
   tags = var.tags
